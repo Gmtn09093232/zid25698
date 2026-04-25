@@ -10,7 +10,7 @@ bot.start((ctx) => {
         [
           {
             text: '🎮 Open Game',
-            web_app: { url: 'http://localhost:3000' } // your mini app URL
+            web_app: { url: 'https://zid25698.onrender.com' } // your mini app URL
           }
         ]
       ]

@@ -8,30 +8,41 @@ app.use(express.static(__dirname));
 const BOT_TOKEN = "8643570547:AAHOjH4GE12-dQ4JPbovs24reJgwVYWaU0o"; // replace this
 
 // In-memory DB (replace later)
-const users = {};
+const pool = require('./db');
 
-function verifyTelegramData(initData, botToken) {
-  const secret = crypto
-    .createHash('sha256')
-    .update(botToken)
-    .digest();
+app.post('/auth', async (req, res) => {
+  const { telegramId, username, firstName } = req.body;
 
-  const dataCheckString = initData
-    .split('&')
-    .filter(item => !item.startsWith('hash='))
-    .sort()
-    .join('\n');
+  try {
+    let result = await pool.query(
+      "SELECT * FROM users WHERE telegram_id = $1",
+      [telegramId]
+    );
 
-  const hash = crypto
-    .createHmac('sha256', secret)
-    .update(dataCheckString)
-    .digest('hex');
+    let user;
 
-  const receivedHash = initData.match(/hash=([^&]+)/)[1];
+    if (result.rows.length === 0) {
+      const insert = await pool.query(
+        `INSERT INTO users (telegram_id, username, first_name, balance)
+         VALUES ($1, $2, $3, 0)
+         RETURNING *`,
+        [telegramId, username, firstName]
+      );
 
-  return hash === receivedHash;
-}
+      user = insert.rows[0];
+      console.log("✅ New user saved");
+    } else {
+      user = result.rows[0];
+      console.log("🔁 Existing user loaded");
+    }
 
+    res.json(user);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("DB error");
+  }
+});
 app.post('/auth', (req, res) => {
   const { telegramId, username, firstName } = req.body;
 
