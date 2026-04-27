@@ -1,170 +1,102 @@
-const express = require('express');
+const express = require("express");
+const http = require("http");
+const socketIo = require("socket.io");
+require("dotenv").config();
+
+const { verifyTelegram } = require("./config/telegram");
+const { getRoom } = require("./game/roomManager");
+const { generateCard, checkWin } = require("./game/bingoLogic");
+
 const app = express();
-const pool = require('./db');
+const server = http.createServer(app);
+const io = socketIo(server);
 
 app.use(express.json());
-app.use(express.static(__dirname));
+app.use(express.static("public"));
 
-/* =========================
-   USER LOGIN (TELEGRAM)
-========================= */
-app.post('/auth', async (req, res) => {
-  const { telegramId, username, firstName } = req.body;
+/* ---------------- TELEGRAM AUTH ---------------- */
+io.on("connection", (socket) => {
 
-  if (!telegramId) {
-    return res.status(400).json({ error: 'Invalid Telegram data' });
-  }
+  socket.on("telegramAuth", (data) => {
+    const valid = verifyTelegram(data, process.env.BOT_TOKEN);
 
-  try {
-    let result = await pool.query(
-      "SELECT * FROM users WHERE telegram_id = $1",
-      [telegramId]
-    );
-
-    let user;
-
-    if (result.rows.length === 0) {
-      const insert = await pool.query(
-        `INSERT INTO users (telegram_id, username, first_name, balance)
-         VALUES ($1, $2, $3, 0)
-         RETURNING *`,
-        [telegramId, username, firstName]
-      );
-
-      user = insert.rows[0];
-      console.log("✅ New user saved");
-    } else {
-      user = result.rows[0];
-      console.log("🔁 Existing user loaded");
+    if (!valid) {
+      socket.emit("authError");
+      return;
     }
 
-    res.json(user);
+    const user = getUser(data.id);
+    socket.user = user;
 
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("DB error");
-  }
+    socket.emit("authSuccess", user);
+  });
+
+  /* ---------------- ROOM JOIN ---------------- */
+  socket.on("joinRoom", ({ roomId }) => {
+    const room = getRoom(roomId);
+
+    socket.join(roomId);
+    socket.roomId = roomId;
+
+    socket.emit("roomData", room);
+  });
+
+  /* ---------------- CARD SELECT ---------------- */
+  socket.on("selectCard", () => {
+    const room = getRoom(socket.roomId);
+
+    const card = generateCard();
+
+    room.players[socket.id] = {
+      id: socket.id,
+      card,
+      marked: Array(25).fill(false)
+    };
+
+    socket.emit("card", card);
+  });
+
+  /* ---------------- MARK NUMBER ---------------- */
+  socket.on("mark", ({ index, number }) => {
+    const room = getRoom(socket.roomId);
+    const player = room.players[socket.id];
+
+    if (!player) return;
+
+    if (player.card[index] !== number) return;
+    player.marked[index] = true;
+
+    io.to(socket.roomId).emit("marked", { socketId: socket.id, index });
+
+    if (checkWin(player.marked)) {
+      io.to(socket.roomId).emit("winner", {
+        id: socket.id,
+        name: socket.user.id
+      });
+
+      room.gameActive = false;
+    }
+  });
+
 });
 
+/* ---------------- GAME LOOP ---------------- */
+function startNumberLoop(roomId) {
+  const room = getRoom(roomId);
 
-/* =========================
-   BINGO GAME LOGIC
-========================= */
+  setInterval(() => {
+    if (!room.gameActive) return;
 
-// Game state
-let players = {};        // { telegramId: { card: [], marked: [] } }
-let calledNumbers = [];
-let gameRunning = false;
+    const num = Math.floor(Math.random() * 75) + 1;
 
-// Generate bingo card (5x5)
-function generateCard() {
-  let numbers = [];
-  while (numbers.length < 25) {
-    let n = Math.floor(Math.random() * 75) + 1;
-    if (!numbers.includes(n)) numbers.push(n);
-  }
-  return numbers;
-}
+    room.calledNumbers.push(num);
 
-// Player joins game
-app.post('/join', async (req, res) => {
-  const { telegramId } = req.body;
-
-  if (!telegramId) {
-    return res.status(400).send("Missing ID");
-  }
-
-  if (players[telegramId]) {
-    return res.json(players[telegramId]);
-  }
-
-  const card = generateCard();
-
-  players[telegramId] = {
-    card,
-    marked: []
-  };
-
-  console.log("🎮 Player joined:", telegramId);
-
-  res.json(players[telegramId]);
-});
-
-
-// Start game
-app.post('/start-game', (req, res) => {
-  if (gameRunning) return res.send("Game already running");
-
-  gameRunning = true;
-  calledNumbers = [];
-
-  console.log("🚀 Game started");
-
-  const interval = setInterval(() => {
-    if (!gameRunning) return clearInterval(interval);
-
-    let num;
-    do {
-      num = Math.floor(Math.random() * 75) + 1;
-    } while (calledNumbers.includes(num));
-
-    calledNumbers.push(num);
-    console.log("📢 Called:", num);
+    io.to(roomId).emit("number", num);
 
   }, 4000);
-
-  res.send("Game started");
-});
-
-
-// Mark number
-app.post('/mark', (req, res) => {
-  const { telegramId, number } = req.body;
-
-  const player = players[telegramId];
-  if (!player) return res.send("Player not found");
-
-  if (calledNumbers.includes(number)) {
-    if (!player.marked.includes(number)) {
-      player.marked.push(number);
-    }
-  }
-
-  res.json(player);
-});
-
-
-// Check win
-function checkWin(marked) {
-  if (marked.length < 5) return false;
-
-  // Simple check (you can expand)
-  return marked.length >= 5;
 }
 
-
-// Check winner
-app.post('/check-win', (req, res) => {
-  const { telegramId } = req.body;
-
-  const player = players[telegramId];
-  if (!player) return res.send("Player not found");
-
-  if (checkWin(player.marked)) {
-    gameRunning = false;
-
-    console.log("🏆 Winner:", telegramId);
-
-    return res.json({ winner: true });
-  }
-
-  res.json({ winner: false });
-});
-
-
-/* =========================
-   SERVER
-========================= */
-app.listen(3000, () => {
-  console.log("🚀 Server running at http://localhost:3000");
+const PORT = process.env.PORT || 2000;
+server.listen(PORT, () => {
+  console.log("Bingo Pro running on", `http://t.me/melkamu1236_bot:${PORT}`);
 });
