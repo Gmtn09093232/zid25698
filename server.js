@@ -1,17 +1,19 @@
 const express = require('express');
-const crypto = require('crypto');
 const app = express();
+const pool = require('./db');
 
 app.use(express.json());
 app.use(express.static(__dirname));
 
-const BOT_TOKEN = "8643570547:AAHOjH4GE12-dQ4JPbovs24reJgwVYWaU0o"; // replace this
-
-// In-memory DB (replace later)
-const pool = require('./db');
-
+/* =========================
+   USER LOGIN (TELEGRAM)
+========================= */
 app.post('/auth', async (req, res) => {
   const { telegramId, username, firstName } = req.body;
+
+  if (!telegramId) {
+    return res.status(400).json({ error: 'Invalid Telegram data' });
+  }
 
   try {
     let result = await pool.query(
@@ -43,32 +45,126 @@ app.post('/auth', async (req, res) => {
     res.status(500).send("DB error");
   }
 });
-app.post('/auth', (req, res) => {
-  const { telegramId, username, firstName } = req.body;
+
+
+/* =========================
+   BINGO GAME LOGIC
+========================= */
+
+// Game state
+let players = {};        // { telegramId: { card: [], marked: [] } }
+let calledNumbers = [];
+let gameRunning = false;
+
+// Generate bingo card (5x5)
+function generateCard() {
+  let numbers = [];
+  while (numbers.length < 25) {
+    let n = Math.floor(Math.random() * 75) + 1;
+    if (!numbers.includes(n)) numbers.push(n);
+  }
+  return numbers;
+}
+
+// Player joins game
+app.post('/join', async (req, res) => {
+  const { telegramId } = req.body;
 
   if (!telegramId) {
-    return res.status(400).json({ error: 'Invalid Telegram data' });
+    return res.status(400).send("Missing ID");
   }
 
-  let user = users[telegramId];
-
-  if (!user) {
-    user = {
-      telegramId,
-      username,
-      firstName,
-      balance: 0
-    };
-
-    users[telegramId] = user;
-    console.log("✅ New user created:", user);
-  } else {
-    console.log("🔁 Existing user:", user);
+  if (players[telegramId]) {
+    return res.json(players[telegramId]);
   }
 
-  res.json(user);
+  const card = generateCard();
+
+  players[telegramId] = {
+    card,
+    marked: []
+  };
+
+  console.log("🎮 Player joined:", telegramId);
+
+  res.json(players[telegramId]);
 });
 
+
+// Start game
+app.post('/start-game', (req, res) => {
+  if (gameRunning) return res.send("Game already running");
+
+  gameRunning = true;
+  calledNumbers = [];
+
+  console.log("🚀 Game started");
+
+  const interval = setInterval(() => {
+    if (!gameRunning) return clearInterval(interval);
+
+    let num;
+    do {
+      num = Math.floor(Math.random() * 75) + 1;
+    } while (calledNumbers.includes(num));
+
+    calledNumbers.push(num);
+    console.log("📢 Called:", num);
+
+  }, 4000);
+
+  res.send("Game started");
+});
+
+
+// Mark number
+app.post('/mark', (req, res) => {
+  const { telegramId, number } = req.body;
+
+  const player = players[telegramId];
+  if (!player) return res.send("Player not found");
+
+  if (calledNumbers.includes(number)) {
+    if (!player.marked.includes(number)) {
+      player.marked.push(number);
+    }
+  }
+
+  res.json(player);
+});
+
+
+// Check win
+function checkWin(marked) {
+  if (marked.length < 5) return false;
+
+  // Simple check (you can expand)
+  return marked.length >= 5;
+}
+
+
+// Check winner
+app.post('/check-win', (req, res) => {
+  const { telegramId } = req.body;
+
+  const player = players[telegramId];
+  if (!player) return res.send("Player not found");
+
+  if (checkWin(player.marked)) {
+    gameRunning = false;
+
+    console.log("🏆 Winner:", telegramId);
+
+    return res.json({ winner: true });
+  }
+
+  res.json({ winner: false });
+});
+
+
+/* =========================
+   SERVER
+========================= */
 app.listen(3000, () => {
   console.log("🚀 Server running at http://localhost:3000");
 });
