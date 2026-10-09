@@ -1,149 +1,1747 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="en" data-theme="light">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bingo Game</title>
-
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hearthside — A quieter way to meet someone real.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600&family=Inter:wght@400;500;600&display=swap">
+<script>
+  (function () {
+    try {
+      var s = localStorage.getItem("hearthside-theme");
+      var m = matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.setAttribute("data-theme", s || (m ? "dark" : "light"));
+    } catch (e) {}
+  })();
+</script>
 <style>
-  body { font-family: Arial; text-align: center; }
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(5, 60px);
-    gap: 5px;
-    justify-content: center;
-    margin-top: 20px;
-  }
-  .cell {
-    border: 1px solid #333;
-    padding: 15px;
-    cursor: pointer;
-  }
-  .marked {
-    background: green;
-    color: white;
-  }
+/* ============ tokens ============ */
+:root {
+  --bg:#faf6ee; --surface:#fff; --surface-2:#efe6d6; --text:#1a1310; --text-muted:#6b6259;
+  --border:#e3d9c6; --primary:#d4622a; --primary-hover:#b9501e; --primary-fg:#fff;
+  --accent:#2f4a3c; --danger:#b23a1e; --success:#2f6b4a;
+  --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --radius-pill:999px;
+  --shadow-e1:0 1px 3px rgba(26,19,16,.06); --shadow-e2:0 4px 12px rgba(26,19,16,.08);
+  --ease:cubic-bezier(.2,0,0,1);
+  --font-display:"Bricolage Grotesque",ui-serif,Georgia,serif;
+  --font-sans:"Inter",ui-sans-serif,system-ui,sans-serif;
+}
+[data-theme="dark"] {
+  --bg:#14100e; --surface:#1e1815; --surface-2:#2a2220; --text:#f2eadb; --text-muted:#a69b8c;
+  --border:#352c28; --primary:#e07a45; --primary-hover:#f08f5c; --primary-fg:#1a1310;
+  --accent:#7aa88f; --danger:#e0765a; --success:#7aa88f;
+}
+/* ============ base ============ */
+*,*::before,*::after{box-sizing:border-box;border-color:var(--border);}
+html{color-scheme:light;} [data-theme="dark"]{color-scheme:dark;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;}
+h1,h2,h3,h4{font-family:var(--font-display);letter-spacing:-.01em;margin:0;line-height:1.15;}
+p{margin:0;} a{color:inherit;text-decoration:none;} a:hover{text-decoration:underline;}
+img{display:block;max-width:100%;} ul{margin:0;padding:0;list-style:none;}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:4px;}
+.muted{color:var(--text-muted);} .small{font-size:13px;} .hide-sm{display:none;}
+@media (min-width:640px){.hide-sm{display:inline-flex;}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.001ms!important;animation-duration:.001ms!important;}}
+/* ============ layout ============ */
+.container{width:100%;margin:0 auto;padding:0 20px;max-width:720px;}
+.container-lg{max-width:1180px;}
+#app{min-height:60vh;}
+.section{padding:80px 0;} .section-tight{padding:48px 0;}
+.stack>*+*{margin-top:16px;}
+/* ============ header/footer ============ */
+.site-header{position:sticky;top:0;z-index:40;border-bottom:1px solid var(--border);background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:saturate(180%) blur(12px);}
+.header-row{display:flex;align-items:center;gap:24px;height:64px;justify-content:space-between;}
+.brand-mark{font-family:var(--font-display);font-weight:600;font-size:18px;}
+.nav-desktop{display:none;gap:4px;}
+@media (min-width:768px){.nav-desktop{display:flex;}}
+.nav-desktop a{padding:8px 12px;border-radius:var(--radius-pill);font-size:14px;color:var(--text-muted);transition:background .15s var(--ease);}
+.nav-desktop a:hover,.nav-desktop a.active{background:var(--surface-2);color:var(--text);text-decoration:none;}
+.header-actions{display:flex;gap:8px;align-items:center;}
+.icon-moon{display:none;} [data-theme="dark"] .icon-sun{display:none;} [data-theme="dark"] .icon-moon{display:inline;}
+.site-footer{margin-top:96px;border-top:1px solid var(--border);background:var(--surface);}
+.footer-grid{display:grid;gap:32px;padding:56px 20px;}
+@media (min-width:768px){.footer-grid{grid-template-columns:1.4fr 1fr 1fr 1fr;}}
+.footer-grid h3{font-size:14px;font-family:var(--font-sans);font-weight:600;}
+.footer-grid ul{margin-top:12px;display:grid;gap:8px;}
+.footer-grid a{font-size:14px;color:var(--text-muted);}
+.footer-bottom{border-top:1px solid var(--border);}
+.footer-bottom-row{display:flex;flex-direction:column;gap:8px;padding:20px;font-size:12px;color:var(--text-muted);}
+@media (min-width:640px){.footer-bottom-row{flex-direction:row;justify-content:space-between;}}
+/* ============ buttons ============ */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 20px;border-radius:var(--radius-pill);font:inherit;font-size:14px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:background .15s var(--ease),transform .1s var(--ease);}
+.btn:disabled{opacity:.5;cursor:not-allowed;} .btn:active:not(:disabled){transform:translateY(1px);}
+.btn-primary{background:var(--primary);color:var(--primary-fg);} .btn-primary:hover{background:var(--primary-hover);text-decoration:none;}
+.btn-secondary{background:var(--surface);color:var(--text);border-color:var(--border);} .btn-secondary:hover{background:var(--surface-2);text-decoration:none;}
+.btn-ghost{background:transparent;color:var(--text);} .btn-ghost:hover{background:var(--surface-2);text-decoration:none;}
+.btn-danger{background:var(--danger);color:#fff;} .btn-danger:hover{opacity:.9;text-decoration:none;}
+.btn-sm{height:36px;padding:0 14px;font-size:13px;}
+.btn-lg{height:52px;padding:0 28px;font-size:16px;}
+.btn-block{width:100%;}
+/* ============ forms ============ */
+.input,.textarea,.select{width:100%;padding:10px 14px;font:inherit;font-size:14px;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);transition:border-color .15s var(--ease);}
+.input{height:44px;} .select{height:44px;}
+.textarea{min-height:120px;resize:vertical;}
+.input:focus,.textarea:focus,.select:focus{border-color:var(--primary);outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 25%,transparent);}
+.input::placeholder,.textarea::placeholder{color:var(--text-muted);}
+.field{display:grid;gap:6px;}
+.field-label{font-size:13px;font-weight:500;}
+.field-help{font-size:12px;color:var(--text-muted);}
+.field-error{font-size:12px;color:var(--danger);}
+/* ============ card/badge ============ */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-e1);}
+.card-body{padding:24px;}
+.badge{display:inline-flex;align-items:center;padding:4px 10px;border-radius:var(--radius-pill);font-size:12px;font-weight:500;background:var(--surface-2);color:var(--text);}
+.badge-primary{background:color-mix(in srgb,var(--primary) 15%,transparent);color:var(--primary);}
+.badge-outline{background:transparent;border:1px solid var(--border);color:var(--text-muted);}
+.badge-success{background:color-mix(in srgb,var(--success) 15%,transparent);color:var(--success);}
+/* ============ utilities ============ */
+.grid{display:grid;gap:24px;}
+.grid-3{grid-template-columns:1fr;}
+@media (min-width:640px){.grid-3{grid-template-columns:repeat(2,1fr);}}
+@media (min-width:960px){.grid-3{grid-template-columns:repeat(3,1fr);}}
+.lead{font-size:18px;color:var(--text-muted);}
+.hero-h1{font-size:clamp(36px,5vw,60px);} .page-h1{font-size:clamp(32px,4vw,48px);}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.row-between{display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap;}
+/* ============ page-specific ============ */
+.sample-card-photo{height:224px;border-radius:var(--radius-lg) var(--radius-lg) 0 0;background:linear-gradient(135deg,var(--surface-2),color-mix(in srgb,var(--primary) 12%,var(--surface-2)));}
+.draft-banner{padding:16px;border-radius:var(--radius-md);background:var(--surface-2);}
+.legal-block h2{font-size:20px;} .legal-block p{margin-top:8px;color:var(--text-muted);}
+.legal-block+.legal-block{margin-top:32px;}
+.guideline{border-left:3px solid var(--primary);padding-left:20px;} .guideline+.guideline{margin-top:32px;}
+.guideline p{margin-top:8px;color:var(--text-muted);}
+details.faq{padding:20px 0;border-bottom:1px solid var(--border);}
+details.faq summary{cursor:pointer;font-family:var(--font-display);font-size:18px;font-weight:600;list-style:none;}
+details.faq summary::-webkit-details-marker{display:none;}
+details.faq summary::after{content:" +";color:var(--text-muted);float:right;}
+details.faq[open] summary::after{content:" –";}
+details.faq p{margin-top:12px;color:var(--text-muted);}
+/* ============ auth pages ============ */
+.auth-wrap{min-height:calc(100vh - 64px);display:flex;align-items:center;justify-content:center;padding:40px 20px;}
+.auth-card{width:100%;max-width:440px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-e2);padding:32px;}
+.auth-card h1{font-size:24px;margin-bottom:6px;} .auth-card .sub{color:var(--text-muted);font-size:14px;margin-bottom:24px;}
+.auth-card form{display:grid;gap:16px;}
+.auth-foot{margin-top:20px;font-size:14px;color:var(--text-muted);text-align:center;}
+.auth-foot a{color:var(--primary);font-weight:500;}
+.notice{padding:12px 14px;border-radius:var(--radius-md);font-size:14px;margin-bottom:16px;}
+.notice-error{background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger);}
+.notice-success{background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success);}
+.notice-info{background:var(--surface-2);color:var(--text);}
+/* ============ wizard ============ */
+.wizard{padding:40px 20px;max-width:560px;margin:0 auto;}
+.wizard-progress{display:flex;gap:6px;margin-bottom:8px;}
+.wizard-progress span{flex:1;height:4px;background:var(--surface-2);border-radius:2px;transition:background .3s var(--ease);}
+.wizard-progress span.done{background:var(--primary);} .wizard-progress span.current{background:color-mix(in srgb,var(--primary) 55%,var(--surface-2));}
+.wizard-step-label{font-size:12px;color:var(--text-muted);margin-bottom:24px;}
+.wizard h2{font-size:26px;margin-bottom:6px;}
+.wizard .sub{color:var(--text-muted);margin-bottom:24px;font-size:15px;}
+.wizard-actions{display:flex;gap:12px;justify-content:space-between;margin-top:32px;}
+.chip-row{display:flex;flex-wrap:wrap;gap:8px;}
+.chip{padding:8px 14px;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--surface);font-size:14px;cursor:pointer;transition:all .15s var(--ease);}
+.chip:hover{border-color:var(--primary);}
+.chip.selected{background:var(--primary);color:var(--primary-fg);border-color:var(--primary);}
+.photo-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+.photo-slot{aspect-ratio:3/4;border-radius:var(--radius-md);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;background:var(--surface-2);position:relative;overflow:hidden;cursor:pointer;transition:border-color .15s var(--ease);}
+.photo-slot:hover{border-color:var(--primary);}
+.photo-slot img{width:100%;height:100%;object-fit:cover;}
+.photo-slot .remove{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);color:#fff;border:0;border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:14px;line-height:1;}
+.photo-slot .label{position:absolute;bottom:6px;left:6px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;}
+/* ============ settings nav ============ */
+.settings-layout{display:grid;gap:32px;padding:40px 0;}
+@media (min-width:768px){.settings-layout{grid-template-columns:220px 1fr;}}
+.settings-nav{display:flex;gap:4px;flex-direction:row;overflow-x:auto;}
+@media (min-width:768px){.settings-nav{flex-direction:column;overflow-x:visible;}}
+.settings-nav a{padding:10px 14px;border-radius:var(--radius-md);font-size:14px;color:var(--text-muted);white-space:nowrap;}
+.settings-nav a:hover{background:var(--surface-2);color:var(--text);text-decoration:none;}
+.settings-nav a.active{background:var(--surface-2);color:var(--text);font-weight:500;}
+.settings-panel h1{font-size:24px;margin-bottom:6px;}
+.settings-panel .sub{color:var(--text-muted);font-size:14px;margin-bottom:24px;}
+.settings-panel form{display:grid;gap:20px;max-width:560px;}
+.settings-panel fieldset{border:0;padding:0;margin:0;}
+.settings-panel .section-label{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:12px;}
+/* ============ avatar menu ============ */
+.avatar-btn{display:inline-flex;align-items:center;gap:8px;padding:4px;border-radius:var(--radius-pill);border:1px solid transparent;background:transparent;cursor:pointer;font:inherit;color:inherit;}
+.avatar-btn:hover{background:var(--surface-2);}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--surface-2);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;}
+.menu-wrap{position:relative;}
+.menu{position:absolute;top:calc(100% + 8px);right:0;min-width:200px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-e2);padding:6px;display:none;z-index:50;}
+.menu.open{display:block;}
+.menu a,.menu button{display:block;width:100%;text-align:left;padding:8px 12px;font:inherit;font-size:14px;color:var(--text);background:none;border:0;border-radius:var(--radius-sm);cursor:pointer;}
+.menu a:hover,.menu button:hover{background:var(--surface-2);text-decoration:none;}
+.menu hr{border:0;border-top:1px solid var(--border);margin:6px 0;}
+/* ============ skeleton ============ */
+.skeleton{background:var(--surface-2);border-radius:var(--radius-md);animation:pulse 1.5s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.5;}}
 </style>
 </head>
 <body>
+  <header class="site-header" id="site-header"></header>
+  <main id="app" aria-live="polite"></main>
+  <footer class="site-footer">
+    <div class="container container-lg footer-grid">
+      <div>
+        <p class="brand-mark">Hearthside</p>
+        <p class="muted small">A quieter way to meet someone real.</p>
+      </div>
+      <div><h3>Product</h3><ul>
+        <li><a href="#/how-it-works" data-link>How it works</a></li>
+        <li><a href="#/discover-preview" data-link>Preview</a></li>
+        <li><a href="#/membership" data-link>Membership</a></li>
+        <li><a href="#/faq" data-link>FAQ</a></li>
+      </ul></div>
+      <div><h3>Trust</h3><ul>
+        <li><a href="#/safety" data-link>Safety</a></li>
+        <li><a href="#/community-guidelines" data-link>Community guidelines</a></li>
+        <li><a href="#/contact" data-link>Contact</a></li>
+      </ul></div>
+      <div><h3>Legal</h3><ul>
+        <li><a href="#/terms" data-link>Terms</a></li>
+        <li><a href="#/privacy" data-link>Privacy</a></li>
+      </ul></div>
+    </div>
+    <div class="footer-bottom"><div class="container container-lg footer-bottom-row">
+      <p>© <span id="year"></span> Hearthside. All rights reserved.</p>
+      <p>Made with care. Not affiliated with any other platform.</p>
+    </div></div>
+  </footer>
 
-<h2 id="title">Loading...</h2>
-<p id="userInfo"></p>
-<button onclick="joinGame()">Join Game</button>
-<button onclick="checkWin()">Check Win</button>
+<script type="module">
+/* ============================================================================
+   1. CONFIG
+   ============================================================================ */
+const SUPABASE_URL      = "https://YOUR-PROJECT.supabase.co";
+const SUPABASE_ANON_KEY = "YOUR-ANON-KEY";
 
-<div id="card" class="grid"></div>
+const BRAND = {
+  name: "Hearthside",
+  tagline: "A quieter way to meet someone real.",
+  supportEmail: "hello@hearthside.example",
+  legalEmail: "legal@hearthside.example",
+};
 
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script>
-let telegramId = null;
-let cardData = [];
-let marked = [];
+let db = null;
+if (!SUPABASE_URL.startsWith("https://YOUR")) {
+  const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.45.4");
+  db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      flowType: "pkce",
+    },
+  });
+  // Clean up ?code=... after Supabase has exchanged it.
+  if (location.search.includes("code=")) {
+    setTimeout(() => history.replaceState({}, "", location.pathname + location.hash), 200);
+  }
+}
+window.db = db;
 
-/* ======================
-   TELEGRAM LOGIN
-====================== */
-const tg = window.Telegram.WebApp;
-tg.expand();
+/* ============================================================================
+   2. HELPERS
+   ============================================================================ */
+const $  = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+const escapeHtml = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+  ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const html = (strings, ...v) => strings.reduce((o, s, i) => o + s + (v[i] ?? ""), "");
+const uuid = () => crypto.randomUUID();
 
-const user = tg.initDataUnsafe.user;
+function notice(kind, text) {
+  return `<div class="notice notice-${kind}">${escapeHtml(text)}</div>`;
+}
 
-if (!user) {
-  document.body.innerHTML = "❌ Open inside Telegram";
-} else {
-  telegramId = user.id;
+function field(label, name, opts = {}) {
+  const {
+    type = "text", value = "", placeholder = "", required = false,
+    help = "", autocomplete = "", min, max, rows = 5, options,
+  } = opts;
+  const common = `id="f-${name}" name="${name}" ${required ? "required" : ""}`;
+  const inputHtml = options
+    ? `<select class="select" ${common}>
+         ${options.map(([v, l]) => `<option value="${escapeHtml(v)}" ${v === value ? "selected" : ""}>${escapeHtml(l)}</option>`).join("")}
+       </select>`
+    : rows && type === "textarea"
+      ? `<textarea class="textarea" ${common} rows="${rows}" placeholder="${escapeHtml(placeholder)}">${escapeHtml(value)}</textarea>`
+      : `<input class="input" ${common} type="${type}" value="${escapeHtml(value)}" placeholder="${escapeHtml(placeholder)}" ${autocomplete ? `autocomplete="${autocomplete}"` : ""} ${min != null ? `min="${min}"` : ""} ${max != null ? `max="${max}"` : ""}>`;
+  return `<div class="field">
+    <label class="field-label" for="f-${name}">${escapeHtml(label)}${required ? " *" : ""}</label>
+    ${inputHtml}
+    ${help ? `<p class="field-help">${escapeHtml(help)}</p>` : ""}
+  </div>`;
+}
 
-  fetch('/auth', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      telegramId: user.id,
-      username: user.username,
-      firstName: user.first_name
-    })
-  })
-  .then(res => res.json())
-  .then(data => {
-    document.getElementById("title").innerText = "🎮 Bingo Game";
-    document.getElementById("userInfo").innerText =
-      `Welcome ${data.first_name} (@${data.username}) | Balance: ${data.balance}`;
+/* ============================================================================
+   3. THEME
+   ============================================================================ */
+const THEME_KEY = "hearthside-theme";
+const getTheme = () => document.documentElement.getAttribute("data-theme") || "light";
+function setTheme(next) {
+  document.documentElement.setAttribute("data-theme", next);
+  try { localStorage.setItem(THEME_KEY, next); } catch {}
+}
+function toggleTheme() { setTheme(getTheme() === "dark" ? "light" : "dark"); }
+
+/* ============================================================================
+   4. AUTH STATE
+   ============================================================================ */
+let session = null;
+let profile = null;
+let entitlements = null;
+let authReady = false;
+
+async function loadEntitlements() {
+  if (!session) { entitlements = null; return; }
+  const { data } = await db.rpc("my_entitlements");
+  entitlements = data || { is_premium: false, unlimited_likes: false, see_likes: false, advanced_filters: false, undo_pass: false };
+}
+
+async function loadProfile() {
+  if (!session) { profile = null; return; }
+  const { data, error } = await db.from("profiles").select("*").eq("id", session.user.id).maybeSingle();
+  if (error) { console.error("[profile]", error); profile = null; return; }
+  profile = data;
+}
+
+async function refreshAuth() {
+  if (!db) { authReady = true; return; }
+  const { data } = await db.auth.getSession();
+  session = data.session || null;
+  if (session) { await loadProfile(); await loadEntitlements(); }
+  authReady = true;
+}
+
+if (db) {
+  db.auth.onAuthStateChange(async (_event, s) => {
+    // Avoid re-entrancy during the initial getSession.
+    session = s || null;
+    if (session) { await loadProfile(); await loadEntitlements(); }
+    else { profile = null; entitlements = null; }
+    render();
   });
 }
 
+/* ============================================================================
+   5. API WRAPPERS
+   ============================================================================ */
+const api = {
+  async signUp(email, password, displayName) {
+    const { data, error } = await db.auth.signUp({
+      email, password,
+      options: {
+        data: { display_name: displayName },
+        emailRedirectTo: location.origin + location.pathname,
+      },
+    });
+    if (error) throw error;
+    return data;
+  },
+  async signIn(email, password) {
+    const { data, error } = await db.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    return data;
+  },
+  async signOut() { await db.auth.signOut(); },
+  async resetPassword(email) {
+    const { error } = await db.auth.resetPasswordForEmail(email, {
+      redirectTo: location.origin + location.pathname + "#/reset-password",
+    });
+    if (error) throw error;
+  },
+  async updatePassword(newPassword) {
+    const { error } = await db.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+  },
+  async updateEmail(newEmail) {
+    const { error } = await db.auth.updateUser({ email: newEmail });
+    if (error) throw error;
+  },
+  async updateProfile(patch) {
+    const { error } = await db.from("profiles").update(patch).eq("id", session.user.id);
+    if (error) throw error;
+    await loadProfile();
+  },
+  async savePreferences(prefs) {
+    const { error } = await db.from("user_preferences").upsert({
+      user_id: session.user.id,
+      ...prefs,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) throw error;
+  },
+  async loadPreferences() {
+    const { data } = await db.from("user_preferences").select("*").eq("user_id", session.user.id).maybeSingle();
+    return data;
+  },
+  async loadInterests() {
+    const { data } = await db.from("interests").select("*").order("name");
+    return data || [];
+  },
+  async loadMyInterests() {
+    const { data } = await db.from("user_interests").select("interest_id").eq("user_id", session.user.id);
+    return (data || []).map((r) => r.interest_id);
+  },
+  async saveInterests(ids) {
+    await db.from("user_interests").delete().eq("user_id", session.user.id);
+    if (ids.length) {
+      const rows = ids.map((interest_id) => ({ user_id: session.user.id, interest_id }));
+      const { error } = await db.from("user_interests").insert(rows);
+      if (error) throw error;
+    }
+  },
+  async loadPhotos(userId) {
+    const uid = userId || session.user.id;
+    const { data } = await db.from("profile_photos").select("*").eq("user_id", uid).order("display_order");
+    return data || [];
+  },
+  async nextPhotoOrder() {
+    const { data } = await db.from("profile_photos")
+      .select("display_order").eq("user_id", session.user.id)
+      .order("display_order", { ascending: false }).limit(1);
+    return data && data[0] ? data[0].display_order + 1 : 0;
+  },
+  async uploadPhoto(file) {
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const path = `${session.user.id}/${uuid()}.${ext}`;
+    const { error: upErr } = await db.storage.from("avatars").upload(path, file, {
+      contentType: file.type, upsert: false,
+    });
+    if (upErr) throw upErr;
+    const order = await this.nextPhotoOrder();
+    const { error: dbErr } = await db.from("profile_photos").insert({
+      user_id: session.user.id,
+      storage_path: path,
+      display_order: order,
+      moderation_status: "pending",
+    });
+    if (dbErr) throw dbErr;
+    return path;
+  },
+  async deletePhoto(photoId, storagePath) {
+    await db.storage.from("avatars").remove([storagePath]);
+    await db.from("profile_photos").delete().eq("id", photoId);
+  },
+  async swapPhotoOrder(a, b) {
+    // Simple swap via temp order. Deferrable constraint allows both updates in a tx.
+    const { error } = await db.rpc("swap_photo_order", { a_id: a, b_id: b });
+    if (error) {
+      // Fallback: two-step with a temp negative order.
+      await db.from("profile_photos").update({ display_order: -1 }).eq("id", a);
+      await db.from("profile_photos").update({ display_order: b }).eq("id", b);
+      await db.from("profile_photos").update({ display_order: a }).eq("id", a);
+    }
+  },
+};
 
-/* ======================
-   JOIN GAME
-====================== */
-function joinGame() {
-  fetch('/join', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ telegramId })
-  })
-  .then(res => res.json())
-  .then(data => {
-    cardData = data.card;
-    marked = [];
-    renderCard();
+/* signed URL cache */
+const signedCache = new Map();
+async function signedUrl(bucket, path, expiresIn = 3600) {
+  const key = `${bucket}/${path}`;
+  const hit = signedCache.get(key);
+  if (hit && Date.now() < hit.exp - 60_000) return hit.url;
+  const { data, error } = await db.storage.from(bucket).createSignedUrl(path, expiresIn);
+  if (error) return null;
+  signedCache.set(key, { url: data.signedUrl, exp: Date.now() + expiresIn * 1000 });
+  return data.signedUrl;
+}
+
+/* ============================================================================
+   6. HEADER
+   ============================================================================ */
+const NAV_PUBLIC = [
+  ["#/how-it-works", "How it works"],
+  ["#/discover-preview", "Preview"],
+  ["#/membership", "Membership"],
+  ["#/safety", "Safety"],
+  ["#/about", "About"],
+];
+const NAV_MEMBER = [
+  ["#/discover", "Discover"],
+  ["#/matches", "Matches"],
+  ["#/messages", "Messages"],
+];
+
+function initials(name) {
+  return name.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("");
+}
+
+function renderHeader() {
+  const el = $("#site-header");
+  if (!el) return;
+  const signedIn = !!session;
+  const onboarded = signedIn && profile && profile.profile_status === "active";
+
+  const navLinks = signedIn && onboarded ? NAV_MEMBER : NAV_PUBLIC;
+  const navHtml = navLinks.map(([h, l]) => `<a href="${h}" data-link>${l}</a>`).join("");
+
+  const rightSide = signedIn ? `
+    <div class="menu-wrap">
+      <button class="avatar-btn" id="menu-toggle" aria-haspopup="menu" aria-expanded="false">
+        <span class="avatar">${escapeHtml(initials(profile?.display_name || "?"))}</span>
+      </button>
+      <div class="menu" id="user-menu" role="menu">
+        <a href="#/settings/profile" data-link>Profile</a>
+        <a href="#/settings/preferences" data-link>Preferences</a>
+        <a href="#/settings/security" data-link>Security</a>
+        <a href="#/settings/account" data-link>Account</a>
+        <hr>
+        <button id="logout-btn" type="button">Log out</button>
+      </div>
+    </div>` : `
+    <a class="btn btn-ghost btn-sm hide-sm" href="#/login" data-link>Log in</a>
+    <a class="btn btn-primary btn-sm" href="#/signup" data-link>Join</a>`;
+
+  el.innerHTML = `
+    <div class="container container-lg header-row">
+      <a class="brand-mark" href="#/" data-link>${BRAND.name}</a>
+      <nav aria-label="Primary" class="nav-desktop">${navHtml}</nav>
+      <div class="header-actions">
+        <button class="btn btn-ghost btn-sm" id="theme-toggle" aria-label="Toggle theme">
+          <span class="icon-sun">☀</span><span class="icon-moon">☾</span>
+        </button>
+        ${rightSide}
+      </div>
+    </div>`;
+
+  $("#theme-toggle")?.addEventListener("click", toggleTheme);
+
+  const toggle = $("#menu-toggle");
+  const menu = $("#user-menu");
+  if (toggle && menu) {
+    toggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const open = menu.classList.toggle("open");
+      toggle.setAttribute("aria-expanded", String(open));
+    });
+    document.addEventListener("click", () => {
+      menu.classList.remove("open");
+      toggle.setAttribute("aria-expanded", "false");
+    }, { once: true });
+  }
+  $("#logout-btn")?.addEventListener("click", async () => {
+    await api.signOut();
+    location.hash = "#/";
   });
 }
 
+/* ============================================================================
+   7. PAGES — PUBLIC (unchanged from Stage 2)
+   ============================================================================ */
+const SAMPLE_PROFILES = [
+  { name: "Sample · Rowan", age: 32, city: "Sample City", bio: "Illustrator, early riser, terrible at chess and fine with that. Looking for someone who likes long walks and longer conversations.", interests: ["Illustration", "Hiking", "Coffee"], intention: "Long-term relationship" },
+  { name: "Sample · Mira",  age: 29, city: "Sample City", bio: "Sound engineer by day, amateur baker by night. I will absolutely bring you sourdough.", interests: ["Music", "Baking", "Cycling"], intention: "Long-term relationship" },
+  { name: "Sample · Theo",  age: 37, city: "Sample Town", bio: "Ex-architect, now a carpenter. Building a table. Slowly. Ask me about it.", interests: ["Woodworking", "Reading", "Swimming"], intention: "Something serious" },
+];
 
-/* ======================
-   RENDER CARD
-====================== */
-function renderCard() {
-  const card = document.getElementById('card');
-  card.innerHTML = "";
+const publicPages = {
+  "/": () => html`
+    <section class="section"><div class="container container-lg"><div class="stack">
+      <span class="badge badge-primary" style="width:fit-content;">Now taking early members</span>
+      <h1 class="hero-h1">A quieter way to meet someone real.</h1>
+      <p class="lead" style="max-width:560px;">${BRAND.name} is a dating app for people tired of dating apps. Slow introductions, thoughtful profiles, and matches that mean something.</p>
+      <div class="row">
+        <a class="btn btn-primary btn-lg" href="#/signup" data-link>Create your profile</a>
+        <a class="btn btn-secondary btn-lg" href="#/discover-preview" data-link>See a preview</a>
+      </div>
+      <p class="small muted">Free to join. 18+. Read our <a href="#/community-guidelines" data-link>community guidelines</a>.</p>
+    </div></div></section>
 
-  cardData.forEach(num => {
-    const div = document.createElement('div');
-    div.className = "cell";
-    div.innerText = num;
+    <section class="section" style="background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+      <div class="container container-lg stack">
+        <h2 style="font-size:clamp(24px,3vw,32px);max-width:640px;">Built on three ideas.</h2>
+        <div class="grid grid-3">
+          <div class="stack"><h3>Meet with intention</h3><p class="muted">Answer a few honest questions. We introduce you to people who want the same thing.</p></div>
+          <div class="stack"><h3>Safety that&rsquo;s real</h3><p class="muted">Manual photo review, verified email, one-tap block and report.</p></div>
+          <div class="stack"><h3>No slot machine</h3><p class="muted">A finite, curated stack — not an endless feed designed to keep you scrolling.</p></div>
+        </div>
+      </div>
+    </section>
 
-    div.onclick = () => markNumber(num, div);
+    <section class="section"><div class="container" style="text-align:center;">
+      <h2 style="font-size:clamp(24px,3vw,36px);">Ready when you are.</h2>
+      <p class="lead" style="margin:16px auto 32px;max-width:480px;">It takes about five minutes to build a profile.</p>
+      <a class="btn btn-primary btn-lg" href="#/signup" data-link>Start your profile</a>
+    </div></section>`,
 
-    card.appendChild(div);
+  "/how-it-works": () => html`
+    <section class="section"><div class="container stack">
+      <h1 class="page-h1">How it works</h1>
+      <p class="lead">A short tour from signup to first message.</p>
+      <ol style="margin-top:48px;display:grid;gap:48px;">
+        ${[
+          ["01","Build a real profile","Six short prompts. Photos, a few interests, and what you're actually looking for."],
+          ["02","Tell us your preferences","Age range, distance (only if you turn on location), and the kind of relationship you want."],
+          ["03","See a finite stack","Each day we show you a small, curated set of people who match your filters."],
+          ["04","Match, talk, meet","If you both like each other, a conversation opens. Messages are private."],
+        ].map(([n,t,b]) => `<li>
+          <p style="font-family:var(--font-display);font-size:24px;font-weight:600;color:var(--primary);">${n}</p>
+          <h2 style="margin-top:4px;">${t}</h2>
+          <p class="muted" style="margin-top:8px;">${b}</p>
+        </li>`).join("")}
+      </ol>
+      <div class="card" style="margin-top:64px;"><div class="card-body muted">
+        <strong style="color:var(--text);">What we don&rsquo;t do:</strong> we don&rsquo;t sell your data and we don&rsquo;t use dark patterns to keep you subscribed.
+      </div></div>
+    </div></section>`,
+
+  "/discover-preview": () => html`
+    <section class="section"><div class="container container-lg stack">
+      <div class="row"><span class="badge badge-outline">Sample data</span><span class="small muted">None of these are real members.</span></div>
+      <h1 class="page-h1">A preview of discovery</h1>
+      <p class="lead">Roughly what a discovery card looks like once onboarding is complete.</p>
+      <div class="grid grid-3">
+        ${SAMPLE_PROFILES.map((p) => `<article class="card">
+          <div class="sample-card-photo"></div>
+          <div class="card-body stack" style="--space:12px;">
+            <div class="row-between"><h2 style="font-size:18px;">${escapeHtml(p.name)}</h2><span class="muted small">${p.age}</span></div>
+            <p class="muted small">${escapeHtml(p.city)}</p>
+            <p class="small">${escapeHtml(p.bio)}</p>
+            <div class="row" style="gap:6px;">${p.interests.map((i) => `<span class="badge">${escapeHtml(i)}</span>`).join("")}</div>
+            <p class="small muted">Looking for: ${escapeHtml(p.intention)}</p>
+          </div>
+        </article>`).join("")}
+      </div>
+    </div></section>`,
+
+  "/membership": () => {
+    const plans = [
+      { name: "Free", price: "$0", cadence: "always", blurb: "Everything you need to actually meet someone.",
+        features: ["Profile with up to 4 photos","Browse and filter eligible members","Like up to 25 people per day","Unlimited messaging with your matches","Block, report, and privacy controls"],
+        cta: ["Join free","btn-secondary"], highlight: false },
+      { name: "Member+", price: "$12", cadence: "per month, billed monthly", blurb: "For people who want to see the whole picture.",
+        features: ["Everything in Free","See everyone who liked you","Unlimited likes","Advanced filters","Undo your last pass","One weekly profile boost"],
+        cta: ["Choose monthly","btn-primary"], highlight: true },
+      { name: "Member+ (annual)", price: "$96", cadence: "per year, billed annually", blurb: "Same as monthly, two months free.",
+        features: ["Everything in Member+ monthly","Two months free vs monthly","Annual billing, one receipt"],
+        cta: ["Choose annual","btn-secondary"], highlight: false },
+    ];
+    return html`<section class="section"><div class="container container-lg stack">
+      <h1 class="page-h1">Membership</h1>
+      <p class="lead" style="max-width:640px;">A free tier that isn&rsquo;t crippled, and a paid tier for people who want more reach.</p>
+      <div class="grid grid-3" style="margin-top:32px;">
+        ${plans.map((p) => `<article class="card" ${p.highlight ? 'style="border-color:var(--primary);box-shadow:0 0 0 2px var(--primary),var(--shadow-e1);"' : ""}>
+          <div class="card-body stack">
+            ${p.highlight ? '<span class="badge badge-primary" style="width:fit-content;">Most chosen</span>' : ""}
+            <h2 style="font-size:20px;">${p.name}</h2>
+            <p class="muted small">${p.blurb}</p>
+            <p style="font-family:var(--font-display);font-size:40px;font-weight:600;">${p.price}</p>
+            <p class="muted small">${p.cadence}</p>
+            <ul class="muted" style="display:grid;gap:8px;font-size:14px;">${p.features.map((f) => `<li>✓ ${escapeHtml(f)}</li>`).join("")}</ul>
+            <a class="btn ${p.cta[1]}" href="#/signup" data-link style="width:100%;">${p.cta[0]}</a>
+          </div>
+        </article>`).join("")}
+      </div>
+      <p class="small muted" style="max-width:640px;margin-top:24px;">Prices in USD. Cancel any time from Settings → Membership. Paid features are not required to send or receive messages.</p>
+    </div></section>`;
+  },
+
+  "/safety": () => html`<section class="section"><div class="container stack">
+    <h1 class="page-h1">Safety and trust</h1>
+    <p class="lead">Honest information about what we do — and where our limits are.</p>
+    <div style="display:grid;gap:48px;margin-top:32px;">
+      ${[
+        ["What we do",["Manual review of every profile photo before it appears in discovery.","Email verification required before messaging is enabled.","Server-side age gate — you must be 18 or older.","One-tap block and report from any profile or conversation.","Reporting a member never tells them who reported them.","A moderator reviews every report; serious reports within 24 hours."]],
+        ["What we don't do (and won't claim)",["We don't run criminal background checks on members.","We don't verify government identity as part of standard signup.","We can't guarantee anyone you meet is who they say they are.","We don't monitor the content of every private message."]],
+        ["Meeting someone for the first time",["Meet in a public place, in daylight if possible.","Tell a friend where you're going and when you expect to be back.","Arrange your own transport so you can leave whenever you want.","Video chat first if you're unsure.","If something feels wrong, end the date."]],
+        ["If something goes wrong",["Report the member in-app — it goes straight to moderation.","Block them so they can't see your profile or contact you again.","If you believe a crime has occurred, contact local law enforcement first.","For urgent concerns, email our team from the contact page."]],
+      ].map(([t, items]) => `<section>
+        <h2>${t}</h2>
+        <ul class="muted" style="display:grid;gap:10px;margin-top:12px;">${items.map((i) => `<li>${escapeHtml(i)}</li>`).join("")}</ul>
+      </section>`).join("")}
+    </div>
+  </div></section>`,
+
+  "/about": () => html`<section class="section"><div class="container stack">
+    <h1 class="page-h1">About ${BRAND.name}</h1>
+    <div class="muted" style="display:grid;gap:16px;margin-top:16px;">
+      <p>${BRAND.name} exists because dating apps got very good at keeping people on dating apps, and less good at helping them leave.</p>
+      <p>We built it around three assumptions. First, that most people are looking for something specific and can articulate it if you ask. Second, that a finite stack of well-chosen profiles is more useful than an infinite one. Third, that safety features should be built the way a locksmith builds a lock — invisible when nothing&rsquo;s wrong, and reliable when something is.</p>
+      <p>The product is early. We&rsquo;re taking members in small groups so we can actually read the reports that come in and adjust.</p>
+      <p><strong style="color:var(--text);">Where we are:</strong> a small independent team. Not affiliated with any other dating platform.</p>
+      <p><strong style="color:var(--text);">Contact:</strong> ${BRAND.supportEmail} for general questions, ${BRAND.legalEmail} for legal notices.</p>
+    </div>
+  </div></section>`,
+
+  "/faq": () => {
+    const faqs = [
+      ["Is it really free?","Yes. Creating a profile, browsing, matching, and messaging your matches is free. Member+ adds visibility features but nothing you need to hold a conversation."],
+      ["How old do I have to be?","18 or older. We validate this on the server, not just in the browser."],
+      ["Do you verify identity?","Not as part of standard signup. We verify your email address. Some accounts are asked to complete an additional verification step if a report is filed against them."],
+      ["What happens when I block someone?","They disappear from your discovery, matches, and messages. Any active match is ended. They are not told that you blocked them."],
+      ["How do I cancel a paid membership?","Settings → Membership → Cancel. Two clicks. Access continues until the end of the paid period."],
+      ["Do you sell my data?","No. We don't sell data to third parties and we don't run third-party advertising."],
+      ["Can I delete my account?","Yes — Settings → Account → Delete. Profile, photos, and messages are removed from active systems within 30 days."],
+      ["Is location required?","No. Location-based discovery is opt-in."],
+    ];
+    return html`<section class="section"><div class="container stack">
+      <h1 class="page-h1">Frequently asked questions</h1>
+      <div style="margin-top:32px;border-top:1px solid var(--border);">
+        ${faqs.map(([q,a]) => `<details class="faq"><summary>${escapeHtml(q)}</summary><p>${escapeHtml(a)}</p></details>`).join("")}
+      </div>
+    </div></section>`;
+  },
+
+  "/contact": () => html`<section class="section"><div class="container stack">
+    <h1 class="page-h1">Contact</h1>
+    <p class="muted">General questions: <a href="mailto:${BRAND.supportEmail}">${BRAND.supportEmail}</a><br>Legal notices: <a href="mailto:${BRAND.legalEmail}">${BRAND.legalEmail}</a></p>
+    <div class="card" style="border-style:dashed;margin-top:24px;"><div class="card-body stack">
+      <p class="small muted">The contact form goes live with a backend endpoint. Until then, please use email.</p>
+      <form onsubmit="event.preventDefault();return false;" style="display:grid;gap:16px;">
+        <fieldset disabled style="border:0;padding:0;display:grid;gap:16px;opacity:.6;">
+          <input class="input" placeholder="Your name" required>
+          <input class="input" type="email" placeholder="you@example.com" required>
+          <textarea class="textarea" placeholder="How can we help?" required></textarea>
+          <button class="btn btn-primary" type="submit" style="width:fit-content;">Send message</button>
+        </fieldset>
+      </form>
+    </div></div>
+  </div></section>`,
+
+  "/terms": () => html`<section class="section"><div class="container stack">
+    <div class="draft-banner"><p class="small muted"><strong style="color:var(--text);">Draft — not legal advice.</strong> Must be reviewed by a qualified lawyer before launch.</p></div>
+    <h1 class="page-h1">Terms of service</h1>
+    ${[
+      ["1. Who can use the service","You must be at least 18 years old and legally able to enter a binding contract in your jurisdiction. One account per person."],
+      ["2. Your account","You are responsible for your credentials and everything that happens under your account."],
+      ["3. Acceptable use","The community guidelines form part of these terms."],
+      ["4. Paid memberships","Paid plans renew automatically until cancelled. Cancellation takes effect at the end of the current billing period."],
+      ["5. Termination","You may delete your account at any time. We may suspend accounts that violate these terms."],
+      ["6. Disclaimers and liability","Service provided as-is. We do not conduct criminal background checks. Limitation of liability to be drafted with counsel."],
+      ["7. Governing law","To be determined by business registration jurisdiction."],
+    ].map(([h,b]) => `<div class="legal-block"><h2>${escapeHtml(h)}</h2><p>${escapeHtml(b)}</p></div>`).join("")}
+  </div></section>`,
+
+  "/privacy": () => html`<section class="section"><div class="container stack">
+    <div class="draft-banner"><p class="small muted"><strong style="color:var(--text);">Draft — not legal advice.</strong> Must be reviewed by counsel and reconciled with the actual implementation.</p></div>
+    <h1 class="page-h1">Privacy policy</h1>
+    ${[
+      ["1. What we collect","Account details (email, password hash), profile content you provide, usage data needed to operate the service, and — for paid members — payment identifiers from our processor. We do not store raw card numbers."],
+      ["2. What we don't collect","We do not collect precise home location unless you explicitly enable it; when we do we fuzz it to city level for discovery."],
+      ["3. How we use it","To run the service, keep members safe, process payments, and improve matching."],
+      ["4. Retention","On deletion, profile and message data is removed from active systems within 30 days. Payment receipts and moderation records may be retained longer where law requires."],
+      ["5. Your rights","Depending on where you live, you may have rights to access, correct, export, or delete your data. Exercise export and deletion from Settings."],
+      ["6. Sub-processors","Supabase (database and authentication), our hosting provider, and our payment provider."],
+    ].map(([h,b]) => `<div class="legal-block"><h2>${escapeHtml(h)}</h2><p>${escapeHtml(b)}</p></div>`).join("")}
+  </div></section>`,
+
+  "/community-guidelines": () => {
+    const rules = [
+      ["Be a real person","One account, your own photos, your actual age. Impersonation, catfishing, and running accounts on behalf of someone else are removed."],
+      ["No harassment","No slurs, no threats, no sexual content sent to someone who hasn't asked for it."],
+      ["No minors","Anyone under 18 is removed immediately and blocked from re-registering."],
+      ["No solicitation","No selling products, no promoting other platforms, no requests for money — from either side."],
+      ["Respect boundaries","A pass is not an invitation to try harder. If someone unmatches you, that's the end of the conversation."],
+      ["Photos you own","Use photos of yourself that you have the right to share. No photos of other people without consent."],
+    ];
+    return html`<section class="section"><div class="container stack">
+      <h1 class="page-h1">Community guidelines</h1>
+      <p class="lead">These are the rules. Breaking them results in a warning, a restriction, or a permanent ban depending on severity.</p>
+      <div style="display:grid;gap:32px;margin-top:24px;">
+        ${rules.map(([t,b]) => `<div class="guideline"><h2>${escapeHtml(t)}</h2><p>${escapeHtml(b)}</p></div>`).join("")}
+      </div>
+    </div></section>`;
+  },
+};
+
+/* ============================================================================
+   8. PAGES — AUTH
+   ============================================================================ */
+function authCard(inner) {
+  return `<div class="auth-wrap"><div class="auth-card">${inner}</div></div>`;
+}
+
+async function pageSignup() {
+  if (session) { location.hash = "#/"; return ""; }
+  if (!db) return authCard(notice("error", "Supabase is not configured. Fill in SUPABASE_URL and SUPABASE_ANON_KEY."));
+  return authCard(html`
+    <h1>Create your account</h1>
+    <p class="sub">Free. Takes about five minutes.</p>
+    <div id="signup-notice"></div>
+    <form id="signup-form">
+      ${field("Display name", "display_name", { required: true, autocomplete: "nickname", placeholder: "How should we introduce you?" })}
+      ${field("Email", "email", { type: "email", required: true, autocomplete: "email", placeholder: "you@example.com" })}
+      ${field("Password", "password", { type: "password", required: true, autocomplete: "new-password", help: "At least 8 characters." })}
+      ${field("Confirm password", "password2", { type: "password", required: true, autocomplete: "new-password" })}
+      <button class="btn btn-primary btn-block" type="submit">Create account</button>
+    </form>
+    <p class="auth-foot">Already have an account? <a href="#/login" data-link>Log in</a></p>
+    <p class="auth-foot small">By joining you agree to our <a href="#/terms" data-link>terms</a> and <a href="#/community-guidelines" data-link>guidelines</a>.</p>`);
+}
+
+async function pageLogin() {
+  if (session) { location.hash = "#/"; return ""; }
+  if (!db) return authCard(notice("error", "Supabase is not configured."));
+  return authCard(html`
+    <h1>Welcome back</h1>
+    <p class="sub">Log in to continue.</p>
+    <div id="login-notice"></div>
+    <form id="login-form">
+      ${field("Email", "email", { type: "email", required: true, autocomplete: "email" })}
+      ${field("Password", "password", { type: "password", required: true, autocomplete: "current-password" })}
+      <button class="btn btn-primary btn-block" type="submit">Log in</button>
+    </form>
+    <p class="auth-foot"><a href="#/forgot-password" data-link>Forgot your password?</a></p>
+    <p class="auth-foot">New here? <a href="#/signup" data-link>Create an account</a></p>`);
+}
+
+async function pageForgotPassword() {
+  return authCard(html`
+    <h1>Reset your password</h1>
+    <p class="sub">Enter your email and we&rsquo;ll send you a link.</p>
+    <div id="fp-notice"></div>
+    <form id="fp-form">
+      ${field("Email", "email", { type: "email", required: true, autocomplete: "email" })}
+      <button class="btn btn-primary btn-block" type="submit">Send reset link</button>
+    </form>
+    <p class="auth-foot"><a href="#/login" data-link>Back to log in</a></p>`);
+}
+
+async function pageResetPassword() {
+  return authCard(html`
+    <h1>Set a new password</h1>
+    <p class="sub">Choose something you&rsquo;ll remember.</p>
+    <div id="rp-notice"></div>
+    <form id="rp-form">
+      ${field("New password", "password", { type: "password", required: true, autocomplete: "new-password", help: "At least 8 characters." })}
+      ${field("Confirm new password", "password2", { type: "password", required: true, autocomplete: "new-password" })}
+      <button class="btn btn-primary btn-block" type="submit">Update password</button>
+    </form>`);
+}
+
+async function pageVerifyEmail() {
+  return authCard(html`
+    <h1>Check your inbox</h1>
+    <p class="sub">We sent you a confirmation link. Click it to finish signing up.</p>
+    <p class="small muted">Didn&rsquo;t get it? Check spam, or <a href="#/signup" data-link>try again</a>.</p>`);
+}
+
+/* ============================================================================
+   9. ONBOARDING WIZARD
+   ============================================================================ */
+const ONBOARD_KEY = "hearthside-onboarding";
+function loadOnboard() {
+  try { return JSON.parse(localStorage.getItem(ONBOARD_KEY)) || {}; } catch { return {}; }
+}
+function saveOnboard(state) {
+  try { localStorage.setItem(ONBOARD_KEY, JSON.stringify(state)); } catch {}
+}
+function clearOnboard() {
+  try { localStorage.removeItem(ONBOARD_KEY); } catch {}
+}
+
+let onboardState = {};
+let onboardInterests = [];
+let onboardSelectedInterests = new Set();
+let onboardFiles = []; // [{ file, url }]
+
+const INTENTIONS = [
+  "Long-term relationship", "Something serious", "Life partner",
+  "Open to possibilities", "New friends first",
+];
+const GENDERS = ["Woman", "Man", "Non-binary", "Prefer to self-describe"];
+
+const STEPS = [
+  { id: 1, title: "The basics", sub: "Just enough for us to introduce you." },
+  { id: 2, title: "Where you are", sub: "Country and city. We never show your exact location." },
+  { id: 3, title: "What you're looking for", sub: "Intent and a short bio." },
+  { id: 4, title: "Your interests", sub: "Pick a few. These help us find people you'll click with." },
+  { id: 5, title: "Who you'd like to meet", sub: "Age range and preferences. You can change these later." },
+  { id: 6, title: "Add photos", sub: "At least one. Up to four. You can add more later." },
+];
+
+async function pageOnboarding() {
+  if (!session) { location.hash = "#/login"; return ""; }
+  if (profile?.profile_status === "active") { location.hash = "#/discover"; return ""; }
+
+  onboardState = { step: 1, min_age: 18, max_age: 99, location_enabled: false, ...loadOnboard() };
+  if (!onboardInterests.length) onboardInterests = await api.loadInterests();
+
+  return `<div class="wizard" id="wizard">${renderWizard()}</div>`;
+}
+
+function renderWizard() {
+  const step = onboardState.step || 1;
+  const s = STEPS.find((x) => x.id === step);
+  return html`
+    <div class="wizard-progress">
+      ${STEPS.map((x) => `<span class="${x.id < step ? "done" : x.id === step ? "current" : ""}"></span>`).join("")}
+    </div>
+    <p class="wizard-step-label">Step ${step} of ${STEPS.length}</p>
+    <h2>${s.title}</h2>
+    <p class="sub">${s.sub}</p>
+    <div id="wizard-step">${renderWizardStep(step)}</div>
+    <div class="wizard-actions">
+      ${step > 1 ? `<button class="btn btn-secondary" id="wiz-back" type="button">Back</button>` : "<span></span>"}
+      <button class="btn btn-primary" id="wiz-next" type="button">${step === STEPS.length ? "Finish" : "Continue"}</button>
+    </div>
+    <div id="wizard-notice"></div>`;
+}
+
+function renderWizardStep(step) {
+  const s = onboardState;
+  if (step === 1) {
+    return html`
+      ${field("Display name", "display_name", { required: true, value: s.display_name || "", placeholder: "What should we call you?" })}
+      ${field("Date of birth", "date_of_birth", { type: "date", required: true, value: s.date_of_birth || "", help: "You must be 18 or older." })}
+      ${field("Gender", "gender", { value: s.gender || "", options: [["", "Select..."], ...GENDERS.map((g) => [g, g])] })}`;
+  }
+  if (step === 2) {
+    return html`
+      ${field("Country", "country_code", { value: s.country_code || "", placeholder: "Two-letter country code, e.g. US, GB, DE", help: "Optional but helps distance filtering." })}
+      ${field("City", "city", { value: s.city || "", placeholder: "e.g. Berlin" })}`;
+  }
+  if (step === 3) {
+    return html`
+      ${field("What are you looking for?", "relationship_intention", { value: s.relationship_intention || "", options: [["", "Select..."], ...INTENTIONS.map((i) => [i, i])] })}
+      ${field("Short bio", "bio", { type: "textarea", value: s.bio || "", placeholder: "A few sentences about you. What you do, what you love, what you're hoping to find.", help: "Up to 500 characters." })}`;
+  }
+  if (step === 4) {
+    const selected = onboardSelectedInterests;
+    return html`
+      <div class="chip-row" id="interest-chips">
+        ${onboardInterests.map((i) => `<button type="button" class="chip ${selected.has(i.id) ? "selected" : ""}" data-interest="${i.id}">${escapeHtml(i.name)}</button>`).join("")}
+      </div>
+      <p class="field-help" style="margin-top:12px;">Pick as many as you like. These show on your profile.</p>`;
+  }
+  if (step === 5) {
+    return html`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        ${field("Min age", "min_age", { type: "number", value: s.min_age || 18, min: 18, max: 99 })}
+        ${field("Max age", "max_age", { type: "number", value: s.max_age || 99, min: 18, max: 99 })}
+      </div>
+      ${field("Preferred genders", "preferred_genders", { value: "", options: [["", "Any"], ...GENDERS.map((g) => [g, g])] })}
+      <label class="row" style="gap:8px;margin-top:8px;">
+        <input type="checkbox" id="f-location_enabled" ${s.location_enabled ? "checked" : ""}>
+        <span class="small">Enable distance-based discovery (uses city-level location only)</span>
+      </label>
+      ${field("Max distance (km)", "max_distance_km", { type: "number", value: s.max_distance_km || 50, min: 1, max: 500 })}`;
+  }
+  if (step === 6) {
+    return html`
+      <div class="photo-grid" id="photo-grid">
+        ${[0,1,2,3].map((i) => {
+          const f = onboardFiles[i];
+          return f
+            ? `<div class="photo-slot" data-slot="${i}">
+                <img src="${f.url}" alt="">
+                <button type="button" class="remove" data-remove="${i}" aria-label="Remove photo">×</button>
+              </div>`
+            : `<label class="photo-slot" data-slot="${i}">
+                <input type="file" accept="image/jpeg,image/png,image/webp" hidden data-file="${i}">
+                <span class="muted small">${i === 0 ? "Add a photo (required)" : "Add another"}</span>
+              </label>`;
+        }).join("")}
+      </div>
+      <p class="field-help" style="margin-top:12px;">JPEG, PNG, or WebP. Up to 10 MB each. Photos are reviewed before they appear in discovery.</p>`;
+  }
+  return "";
+}
+
+function readWizardStep(step) {
+  const s = onboardState;
+  const val = (name) => {
+    const el = document.getElementById(`f-${name}`);
+    return el ? el.value.trim() : undefined;
+  };
+  if (step === 1) {
+    s.display_name = val("display_name") || s.display_name;
+    s.date_of_birth = val("date_of_birth") || s.date_of_birth;
+    s.gender = val("gender") || s.gender;
+  } else if (step === 2) {
+    s.country_code = (val("country_code") || "").toUpperCase().slice(0, 2);
+    s.city = val("city") || s.city;
+  } else if (step === 3) {
+    s.relationship_intention = val("relationship_intention") || s.relationship_intention;
+    s.bio = (val("bio") || "").slice(0, 500);
+  } else if (step === 5) {
+    s.min_age = Number(val("min_age")) || 18;
+    s.max_age = Number(val("max_age")) || 99;
+    const genderEl = document.getElementById("f-preferred_genders");
+    s.preferred_genders = genderEl && genderEl.value ? [genderEl.value] : [];
+    s.location_enabled = !!document.getElementById("f-location_enabled")?.checked;
+    s.max_distance_km = Number(val("max_distance_km")) || null;
+  }
+}
+
+function validateWizardStep(step) {
+  const s = onboardState;
+  if (step === 1) {
+    if (!s.display_name || s.display_name.length < 2) return "Please enter a display name (2+ characters).";
+    if (!s.date_of_birth) return "Please enter your date of birth.";
+    const age = (Date.now() - new Date(s.date_of_birth).getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+    if (age < 18) return "You must be 18 or older to use Hearthside.";
+    if (age > 120) return "Please enter a valid date of birth.";
+  }
+  if (step === 3 && !s.relationship_intention) return "Please choose what you're looking for.";
+  if (step === 5) {
+    if (s.min_age > s.max_age) return "Minimum age can't be greater than maximum.";
+    if (s.min_age < 18) return "Minimum age can't be below 18.";
+  }
+  if (step === 6 && onboardFiles.length === 0) return "Please add at least one photo.";
+  return null;
+}
+
+async function finishOnboarding() {
+  const s = onboardState;
+  // 1. Update profile
+  await api.updateProfile({
+    display_name: s.display_name,
+    date_of_birth: s.date_of_birth,
+    gender: s.gender || null,
+    country_code: s.country_code || null,
+    city: s.city || null,
+    relationship_intention: s.relationship_intention || null,
+    bio: s.bio || null,
+    profile_status: "active",
+    is_discoverable: true,
+  });
+  // 2. Interests
+  await api.saveInterests(Array.from(onboardSelectedInterests));
+  // 3. Preferences
+  await api.savePreferences({
+    min_age: s.min_age || 18,
+    max_age: s.max_age || 99,
+    preferred_genders: s.preferred_genders || [],
+    preferred_relationship_intentions: s.relationship_intention ? [s.relationship_intention] : [],
+    max_distance_km: s.location_enabled ? (s.max_distance_km || 50) : null,
+    location_enabled: !!s.location_enabled,
+  });
+  // 4. Photos
+  for (const f of onboardFiles) {
+    await api.uploadPhoto(f.file);
+  }
+  clearOnboard();
+  onboardState = {};
+  onboardFiles = [];
+  onboardSelectedInterests.clear();
+  await loadProfile();
+  location.hash = "#/discover";
+}
+
+/* ============================================================================
+   10. PAGES — MEMBER STUBS (filled in later stages)
+   ============================================================================ */
+function stubPage(title, message) {
+  return html`<section class="section"><div class="container stack" style="text-align:center;">
+    <h1 class="page-h1">${escapeHtml(title)}</h1>
+    <p class="lead">${escapeHtml(message)}</p>
+    <a class="btn btn-secondary" href="#/" data-link style="margin-top:24px;">Back home</a>
+  </div></section>`;
+}
+
+async function pageDiscover() {
+  return html`<section class="section"><div class="container stack">
+    <h1 class="page-h1">Discover</h1>
+    <p class="lead">Profile discovery opens in Stage 5. Your profile is complete and visible.</p>
+    <div class="card"><div class="card-body">
+      <p class="muted">What's coming next: profile cards from the discovery pool, filters, likes and passes, and mutual matching.</p>
+    </div></div>
+  </div></section>`;
+}
+async function pageMatches() { return stubPage("Matches", "Mutual matches appear here after Stage 5."); }
+async function pageMessages() { return stubPage("Messages", "Real-time messaging arrives in Stage 6."); }
+
+/* ============================================================================
+   11. PAGES — SETTINGS
+   ============================================================================ */
+function settingsLayout(active, title, sub, body) {
+  const nav = [
+    ["#/settings/profile", "Profile"],
+    ["#/settings/preferences", "Preferences"],
+    ["#/settings/security", "Security"],
+    ["#/settings/account", "Account"],
+  ];
+  return `<section class="section"><div class="container container-lg">
+    <div class="settings-layout">
+      <nav class="settings-nav" aria-label="Settings">
+        ${nav.map(([h, l]) => `<a href="${h}" data-link class="${h === active ? "active" : ""}">${l}</a>`).join("")}
+      </nav>
+      <div class="settings-panel">
+        <h1>${escapeHtml(title)}</h1>
+        <p class="sub">${escapeHtml(sub)}</p>
+        ${body}
+      </div>
+    </div>
+  </div></section>`;
+}
+
+async function pageSettingsProfile() {
+  if (!profile) return "";
+  const [photos, interests, myInterests] = await Promise.all([
+    api.loadPhotos(),
+    api.loadInterests(),
+    api.loadMyInterests(),
+  ]);
+  const photoUrls = await Promise.all(photos.map((p) => signedUrl("avatars", p.storage_path)));
+
+  const body = html`
+    <div id="profile-notice"></div>
+
+    <fieldset class="stack" style="margin-bottom:32px;">
+      <legend class="section-label">Photos</legend>
+      <div class="photo-grid">
+        ${photos.map((p, i) => `
+          <div class="photo-slot" data-photo="${p.id}">
+            ${photoUrls[i] ? `<img src="${photoUrls[i]}" alt="">` : `<span class="muted small">Loading…</span>`}
+            <span class="label">${i === 0 ? "Main" : `#${i + 1}`}${p.moderation_status === "pending" ? " · pending" : ""}</span>
+            <button type="button" class="remove" data-delete="${p.id}" data-path="${escapeHtml(p.storage_path)}" aria-label="Delete photo">×</button>
+          </div>`).join("")}
+        ${photos.length < 4 ? `
+          <label class="photo-slot">
+            <input type="file" id="add-photo" accept="image/jpeg,image/png,image/webp" hidden>
+            <span class="muted small">+ Add photo</span>
+          </label>` : ""}
+      </div>
+      <p class="field-help">New photos are reviewed before they appear in discovery. You can have up to 4.</p>
+    </fieldset>
+
+    <form id="profile-form" class="stack" style="max-width:560px;">
+      ${field("Display name", "display_name", { required: true, value: profile.display_name || "" })}
+      ${field("Date of birth", "date_of_birth", { type: "date", value: profile.date_of_birth || "", help: "You must be 18 or older." })}
+      ${field("Gender", "gender", { value: profile.gender || "", options: [["", "Select..."], ...GENDERS.map((g) => [g, g])] })}
+      ${field("Country", "country_code", { value: profile.country_code || "", placeholder: "Two-letter code, e.g. US, GB, DE" })}
+      ${field("City", "city", { value: profile.city || "" })}
+      ${field("Looking for", "relationship_intention", { value: profile.relationship_intention || "", options: [["", "Select..."], ...INTENTIONS.map((i) => [i, i])] })}
+      ${field("Bio", "bio", { type: "textarea", value: profile.bio || "", help: "Up to 500 characters." })}
+
+      <fieldset>
+        <legend class="section-label">Interests</legend>
+        <div class="chip-row" id="interest-chips">
+          ${interests.map((i) => `<button type="button" class="chip ${myInterests.includes(i.id) ? "selected" : ""}" data-interest="${i.id}">${escapeHtml(i.name)}</button>`).join("")}
+        </div>
+      </fieldset>
+
+      <div class="row" style="margin-top:8px;">
+        <button class="btn btn-primary" type="submit">Save changes</button>
+      </div>
+    </form>`;
+
+  return settingsLayout("#/settings/profile", "Profile", "Your public information.", body);
+}
+
+async function pageSettingsPreferences() {
+  const prefs = (await api.loadPreferences()) || {
+    min_age: 18, max_age: 99, preferred_genders: [],
+    preferred_relationship_intentions: [], max_distance_km: 50, location_enabled: false,
+  };
+  const body = html`
+    <div id="prefs-notice"></div>
+    <form id="prefs-form" class="stack">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        ${field("Min age", "min_age", { type: "number", value: prefs.min_age, min: 18, max: 99 })}
+        ${field("Max age", "max_age", { type: "number", value: prefs.max_age, min: 18, max: 99 })}
+      </div>
+      ${field("Preferred gender", "preferred_genders", {
+        options: [["", "Any"], ...GENDERS.map((g) => [g, g])],
+        value: prefs.preferred_genders?.[0] || "",
+      })}
+      <label class="row" style="gap:8px;">
+        <input type="checkbox" id="f-location_enabled" ${prefs.location_enabled ? "checked" : ""}>
+        <span class="small">Enable distance-based discovery</span>
+      </label>
+      ${field("Max distance (km)", "max_distance_km", { type: "number", value: prefs.max_distance_km || 50, min: 1, max: 500 })}
+      <div class="row" style="margin-top:8px;">
+        <button class="btn btn-primary" type="submit">Save preferences</button>
+      </div>
+    </form>`;
+  return settingsLayout("#/settings/preferences", "Preferences", "Who you'd like to meet. You can change these any time.", body);
+}
+
+async function pageSettingsSecurity() {
+  const body = html`
+    <div id="security-notice"></div>
+    <form id="password-form" class="stack">
+      <legend class="section-label">Change password</legend>
+      ${field("New password", "password", { type: "password", required: true, autocomplete: "new-password", help: "At least 8 characters." })}
+      ${field("Confirm new password", "password2", { type: "password", required: true, autocomplete: "new-password" })}
+      <div class="row"><button class="btn btn-primary" type="submit">Update password</button></div>
+    </form>
+    <hr style="border:0;border-top:1px solid var(--border);margin:32px 0;max-width:560px;">
+    <div class="stack" style="max-width:560px;">
+      <p class="section-label">Session</p>
+      <p class="small muted">You&rsquo;re signed in as <strong style="color:var(--text);">${escapeHtml(session.user.email || "")}</strong>.</p>
+      <div class="row"><button class="btn btn-secondary" id="signout-others" type="button">Sign out of other sessions</button></div>
+    </div>`;
+  return settingsLayout("#/settings/security", "Security", "Password and sessions.", body);
+}
+
+async function pageSettingsAccount() {
+  const body = html`
+    <div id="account-notice"></div>
+    <div class="stack">
+      <div>
+        <p class="section-label">Your data</p>
+        <p class="small muted" style="margin-bottom:12px;">Download a copy of everything we hold about you as JSON.</p>
+        <button class="btn btn-secondary" id="export-btn" type="button">Export my data</button>
+      </div>
+      <hr style="border:0;border-top:1px solid var(--border);margin:16px 0;">
+      <div>
+        <p class="section-label">Delete account</p>
+        <p class="small muted" style="margin-bottom:12px;">
+          Your profile will be hidden immediately and permanently deleted within 30 days.
+          Payment receipts and moderation records may be retained where law requires it.
+          This action cannot be undone.
+        </p>
+        <button class="btn btn-danger" id="delete-btn" type="button">Delete my account</button>
+      </div>
+    </div>`;
+  return settingsLayout("#/settings/account", "Account", "Export or delete your data.", body);
+}
+
+/* ============================================================================
+   12. ROUTER
+   ============================================================================ */
+const routes = [
+  { p: "/",                       h: publicPages["/"], auth: false },
+  { p: "/how-it-works",           h: publicPages["/how-it-works"], auth: false },
+  { p: "/discover-preview",       h: publicPages["/discover-preview"], auth: false },
+  { p: "/membership",             h: publicPages["/membership"], auth: false },
+  { p: "/safety",                 h: publicPages["/safety"], auth: false },
+  { p: "/about",                  h: publicPages["/about"], auth: false },
+  { p: "/faq",                    h: publicPages["/faq"], auth: false },
+  { p: "/contact",                h: publicPages["/contact"], auth: false },
+  { p: "/terms",                  h: publicPages["/terms"], auth: false },
+  { p: "/privacy",                h: publicPages["/privacy"], auth: false },
+  { p: "/community-guidelines",   h: publicPages["/community-guidelines"], auth: false },
+
+  { p: "/signup",                 h: pageSignup,          auth: false },
+  { p: "/login",                  h: pageLogin,           auth: false },
+  { p: "/forgot-password",        h: pageForgotPassword,  auth: false },
+  { p: "/reset-password",         h: pageResetPassword,   auth: false },
+  { p: "/verify-email",           h: pageVerifyEmail,     auth: false },
+
+  { p: "/onboarding",             h: pageOnboarding,      auth: true },
+  { p: "/discover",               h: pageDiscover,        auth: true, onboarded: true },
+  { p: "/matches",                h: pageMatches,         auth: true, onboarded: true },
+  { p: "/messages",               h: pageMessages,        auth: true, onboarded: true },
+
+  { p: "/settings/profile",       h: pageSettingsProfile,     auth: true },
+  { p: "/settings/preferences",   h: pageSettingsPreferences, auth: true },
+  { p: "/settings/security",      h: pageSettingsSecurity,    auth: true },
+  { p: "/settings/account",       h: pageSettingsAccount,     auth: true },
+];
+
+function matchRoute(path) {
+  for (const r of routes) {
+    const rp = r.p.split("/").filter(Boolean);
+    const pp = path.split("/").filter(Boolean);
+    if (rp.length !== pp.length) continue;
+    const params = {};
+    let ok = true;
+    for (let i = 0; i < rp.length; i++) {
+      if (rp[i].startsWith(":")) params[rp[i].slice(1)] = pp[i];
+      else if (rp[i] !== pp[i]) { ok = false; break; }
+    }
+    if (ok) return { route: r, params };
+  }
+  return null;
+}
+
+function currentPath() {
+  const hash = location.hash.replace(/^#/, "");
+  if (!hash || hash === "/") return "/";
+  return hash.split("?")[0].replace(/\/+$/, "") || "/";
+}
+
+let rendering = false;
+async function render() {
+  if (rendering) return;
+  rendering = true;
+  try {
+    const path = currentPath();
+    const match = matchRoute(path);
+    const app = $("#app");
+
+    if (!match) { app.innerHTML = notFoundPage(); return; }
+
+    const { route, params } = match;
+
+    // Route guards
+    if (route.auth && !session) {
+      location.hash = "#/login";
+      return;
+    }
+    if (route.onboarded && profile && profile.profile_status !== "active" && path !== "/onboarding") {
+      location.hash = "#/onboarding";
+      return;
+    }
+
+    // Render
+    const result = route.h;
+    const htmlStr = typeof result === "function" && result.length >= 1 && route.p.includes(":")
+      ? await result(params)
+      : await result();
+    app.innerHTML = htmlStr || "";
+
+    // Attach page-specific handlers
+    attachHandlers(path, params);
+    updateNavActive(path);
+    updateTitle(path);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  } finally {
+    rendering = false;
+  }
+}
+
+function updateNavActive(path) {
+  $$(".nav-desktop a").forEach((a) => {
+    const href = a.getAttribute("href");
+    a.classList.toggle("active", href === `#${path}`);
   });
 }
 
-
-/* ======================
-   MARK NUMBER
-====================== */
-function markNumber(num, el) {
-  fetch('/mark', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ telegramId, number: num })
-  })
-  .then(res => res.json())
-  .then(data => {
-    marked = data.marked;
-    el.classList.add("marked");
-  });
+function updateTitle(path) {
+  const titles = {
+    "/": `${BRAND.name} — ${BRAND.tagline}`,
+    "/how-it-works": `How it works · ${BRAND.name}`,
+    "/discover-preview": `Discover preview · ${BRAND.name}`,
+    "/membership": `Membership · ${BRAND.name}`,
+    "/safety": `Safety · ${BRAND.name}`,
+    "/about": `About · ${BRAND.name}`,
+    "/faq": `FAQ · ${BRAND.name}`,
+    "/contact": `Contact · ${BRAND.name}`,
+    "/terms": `Terms of service · ${BRAND.name}`,
+    "/privacy": `Privacy policy · ${BRAND.name}`,
+    "/community-guidelines": `Community guidelines · ${BRAND.name}`,
+    "/signup": `Create your account · ${BRAND.name}`,
+    "/login": `Log in · ${BRAND.name}`,
+    "/forgot-password": `Reset password · ${BRAND.name}`,
+    "/reset-password": `Set a new password · ${BRAND.name}`,
+    "/onboarding": `Onboarding · ${BRAND.name}`,
+    "/discover": `Discover · ${BRAND.name}`,
+    "/matches": `Matches · ${BRAND.name}`,
+    "/messages": `Messages · ${BRAND.name}`,
+    "/settings/profile": `Profile · ${BRAND.name}`,
+    "/settings/preferences": `Preferences · ${BRAND.name}`,
+    "/settings/security": `Security · ${BRAND.name}`,
+    "/settings/account": `Account · ${BRAND.name}`,
+  };
+  document.title = titles[path] || `Not found · ${BRAND.name}`;
 }
 
+/* ============================================================================
+   13. PAGE HANDLERS (attach DOM listeners after render)
+   ============================================================================ */
+function attachHandlers(path, params) {
+  if (path === "/signup")            attachSignup();
+  else if (path === "/login")        attachLogin();
+  else if (path === "/forgot-password") attachForgotPassword();
+  else if (path === "/reset-password")  attachResetPassword();
+  else if (path === "/onboarding")   attachOnboarding();
+  else if (path === "/settings/profile")     attachSettingsProfile();
+  else if (path === "/settings/preferences") attachSettingsPreferences();
+  else if (path === "/settings/security")    attachSettingsSecurity();
+  else if (path === "/settings/account")     attachSettingsAccount();
+}
 
-/* ======================
-   CHECK WIN
-====================== */
-function checkWin() {
-  fetch('/check-win', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ telegramId })
-  })
-  .then(res => res.json())
-  .then(data => {
-    if (data.winner) {
-      alert("🏆 YOU WIN!");
-    } else {
-      alert("❌ Not yet");
+function showNotice(id, kind, text) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = notice(kind, text);
+}
+
+function attachSignup() {
+  const form = document.getElementById("signup-form");
+  if (!form) return;
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const dn = String(fd.get("display_name")).trim();
+    const email = String(fd.get("email")).trim();
+    const password = String(fd.get("password"));
+    const password2 = String(fd.get("password2"));
+    showNotice("signup-notice", "info", "");
+    if (dn.length < 2) return showNotice("signup-notice", "error", "Display name must be at least 2 characters.");
+    if (password.length < 8) return showNotice("signup-notice", "error", "Password must be at least 8 characters.");
+    if (password !== password2) return showNotice("signup-notice", "error", "Passwords do not match.");
+    const btn = form.querySelector("button[type=submit]");
+    btn.disabled = true; btn.textContent = "Creating account…";
+    try {
+      const data = await api.signUp(email, password, dn);
+      if (data.session) {
+        await loadProfile();
+        location.hash = profile?.profile_status === "active" ? "#/discover" : "#/onboarding";
+      } else {
+        location.hash = "#/verify-email";
+      }
+    } catch (err) {
+      showNotice("signup-notice", "error", err.message || "Could not create account.");
+      btn.disabled = false; btn.textContent = "Create account";
     }
   });
 }
-</script>
 
+function attachLogin() {
+  const form = document.getElementById("login-form");
+  if (!form) return;
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const email = String(fd.get("email")).trim();
+    const password = String(fd.get("password"));
+    const btn = form.querySelector("button[type=submit]");
+    btn.disabled = true; btn.textContent = "Logging in…";
+    try {
+      await api.signIn(email, password);
+      // give onAuthStateChange a beat
+      await new Promise((r) => setTimeout(r, 50));
+      location.hash = profile?.profile_status === "active" ? "#/discover" : "#/onboarding";
+    } catch (err) {
+      showNotice("login-notice", "error", err.message || "Could not log in.");
+      btn.disabled = false; btn.textContent = "Log in";
+    }
+  });
+}
+
+function attachForgotPassword() {
+  const form = document.getElementById("fp-form");
+  if (!form) return;
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = String(new FormData(form).get("email")).trim();
+    const btn = form.querySelector("button[type=submit]");
+    btn.disabled = true; btn.textContent = "Sending…";
+    try {
+      await api.resetPassword(email);
+      showNotice("fp-notice", "success", "If that email exists, a reset link is on its way.");
+      form.reset();
+    } catch (err) {
+      showNotice("fp-notice", "error", err.message || "Could not send reset email.");
+    } finally {
+      btn.disabled = false; btn.textContent = "Send reset link";
+    }
+  });
+}
+
+function attachResetPassword() {
+  const form = document.getElementById("rp-form");
+  if (!form) return;
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const p = String(fd.get("password"));
+    const p2 = String(fd.get("password2"));
+    if (p.length < 8) return showNotice("rp-notice", "error", "Password must be at least 8 characters.");
+    if (p !== p2) return showNotice("rp-notice", "error", "Passwords do not match.");
+    const btn = form.querySelector("button[type=submit]");
+    btn.disabled = true; btn.textContent = "Updating…";
+    try {
+      await api.updatePassword(p);
+      showNotice("rp-notice", "success", "Password updated. Redirecting…");
+      setTimeout(() => { location.hash = "#/login"; }, 800);
+    } catch (err) {
+      showNotice("rp-notice", "error", err.message || "Could not update password.");
+      btn.disabled = false; btn.textContent = "Update password";
+    }
+  });
+}
+
+function attachOnboarding() {
+  const next = document.getElementById("wiz-next");
+  const back = document.getElementById("wiz-back");
+  if (!next) return;
+
+  // Interests chip toggling
+  $$("#interest-chips .chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const id = chip.dataset.interest;
+      if (onboardSelectedInterests.has(id)) onboardSelectedInterests.delete(id);
+      else onboardSelectedInterests.add(id);
+      chip.classList.toggle("selected");
+    });
+  });
+
+  // Photo file inputs
+  $$("#photo-grid input[type=file]").forEach((inp) => {
+    inp.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (file.size > 10 * 1024 * 1024) return alert("File is too large (max 10 MB).");
+      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return alert("Only JPEG, PNG, or WebP.");
+      const slot = Number(inp.dataset.file);
+      onboardFiles[slot] = { file, url: URL.createObjectURL(file) };
+      document.getElementById("wizard-step").innerHTML = renderWizardStep(6);
+      attachOnboardingPhotos();
+    });
+  });
+
+  // Prefill interests if coming back to step 4
+  if ((onboardState.step || 1) === 4 && onboardSelectedInterests.size) {
+    $$("#interest-chips .chip").forEach((c) => {
+      if (onboardSelectedInterests.has(c.dataset.interest)) c.classList.add("selected");
+    });
+  }
+
+  next.addEventListener("click", async () => {
+    const step = onboardState.step || 1;
+    readWizardStep(step);
+    const err = validateWizardStep(step);
+    if (err) return showNotice("wizard-notice", "error", err);
+    saveOnboard(onboardState);
+    if (step === STEPS.length) {
+      next.disabled = true; next.textContent = "Saving…";
+      try {
+        await finishOnboarding();
+      } catch (e) {
+        console.error(e);
+        showNotice("wizard-notice", "error", e.message || "Could not save. Check your connection.");
+        next.disabled = false; next.textContent = "Finish";
+      }
+      return;
+    }
+    onboardState.step = step + 1;
+    saveOnboard(onboardState);
+    document.getElementById("wizard").innerHTML = renderWizard();
+    attachOnboarding();
+  });
+
+  back?.addEventListener("click", () => {
+    readWizardStep(onboardState.step);
+    saveOnboard(onboardState);
+    onboardState.step = Math.max(1, (onboardState.step || 1) - 1);
+    document.getElementById("wizard").innerHTML = renderWizard();
+    attachOnboarding();
+  });
+}
+
+function attachOnboardingPhotos() {
+  $$("#photo-grid input[type=file]").forEach((inp) => {
+    inp.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (file.size > 10 * 1024 * 1024) return alert("File is too large (max 10 MB).");
+      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return alert("Only JPEG, PNG, or WebP.");
+      const slot = Number(inp.dataset.file);
+      onboardFiles[slot] = { file, url: URL.createObjectURL(file) };
+      document.getElementById("wizard-step").innerHTML = renderWizardStep(6);
+      attachOnboardingPhotos();
+    });
+  });
+  $$("#photo-grid [data-remove]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const idx = Number(btn.dataset.remove);
+      onboardFiles.splice(idx, 1);
+      onboardFiles = onboardFiles.filter(Boolean);
+      document.getElementById("wizard-step").innerHTML = renderWizardStep(6);
+      attachOnboardingPhotos();
+    });
+  });
+}
+
+function attachSettingsProfile() {
+  const form = document.getElementById("profile-form");
+  // Interests toggling
+  const selected = new Set();
+  $$("#interest-chips .chip").forEach((chip) => {
+    if (chip.classList.contains("selected")) selected.add(chip.dataset.interest);
+    chip.addEventListener("click", () => {
+      if (selected.has(chip.dataset.interest)) selected.delete(chip.dataset.interest);
+      else selected.add(chip.dataset.interest);
+      chip.classList.toggle("selected");
+    });
+  });
+
+  // Photo upload
+  const addInput = document.getElementById("add-photo");
+  addInput?.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) return alert("File is too large (max 10 MB).");
+    try {
+      addInput.disabled = true;
+      await api.uploadPhoto(file);
+      await render();
+    } catch (err) {
+      showNotice("profile-notice", "error", err.message || "Upload failed.");
+      addInput.disabled = false;
+    }
+  });
+  $$("[data-delete]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("Delete this photo?")) return;
+      try {
+        await api.deletePhoto(btn.dataset.delete, btn.dataset.path);
+        await render();
+      } catch (err) {
+        showNotice("profile-notice", "error", err.message || "Could not delete.");
+      }
+    });
+  });
+
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    try {
+      await api.updateProfile({
+        display_name: String(fd.get("display_name")).trim(),
+        date_of_birth: String(fd.get("date_of_birth")) || null,
+        gender: String(fd.get("gender")) || null,
+        country_code: String(fd.get("country_code")).toUpperCase().slice(0, 2) || null,
+        city: String(fd.get("city")) || null,
+        relationship_intention: String(fd.get("relationship_intention")) || null,
+        bio: String(fd.get("bio")).slice(0, 500) || null,
+      });
+      await api.saveInterests(Array.from(selected));
+      showNotice("profile-notice", "success", "Profile updated.");
+      renderHeader();
+    } catch (err) {
+      showNotice("profile-notice", "error", err.message || "Could not save.");
+    }
+  });
+}
+
+function attachSettingsPreferences() {
+  const form = document.getElementById("prefs-form");
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const min = Number(fd.get("min_age"));
+    const max = Number(fd.get("max_age"));
+    if (min > max) return showNotice("prefs-notice", "error", "Min age can't be greater than max.");
+    if (min < 18) return showNotice("prefs-notice", "error", "Min age can't be below 18.");
+    const genders = fd.get("preferred_genders");
+    try {
+      await api.savePreferences({
+        min_age: min, max_age: max,
+        preferred_genders: genders ? [genders] : [],
+        location_enabled: !!document.getElementById("f-location_enabled")?.checked,
+        max_distance_km: Number(fd.get("max_distance_km")) || null,
+      });
+      showNotice("prefs-notice", "success", "Preferences updated.");
+    } catch (err) {
+      showNotice("prefs-notice", "error", err.message || "Could not save.");
+    }
+  });
+}
+
+function attachSettingsSecurity() {
+  const form = document.getElementById("password-form");
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const p = String(fd.get("password"));
+    const p2 = String(fd.get("password2"));
+    if (p.length < 8) return showNotice("security-notice", "error", "Password must be at least 8 characters.");
+    if (p !== p2) return showNotice("security-notice", "error", "Passwords do not match.");
+    const btn = form.querySelector("button[type=submit]");
+    btn.disabled = true; btn.textContent = "Updating…";
+    try {
+      await api.updatePassword(p);
+      showNotice("security-notice", "success", "Password updated.");
+      form.reset();
+    } catch (err) {
+      showNotice("security-notice", "error", err.message || "Could not update password.");
+    } finally {
+      btn.disabled = false; btn.textContent = "Update password";
+    }
+  });
+  document.getElementById("signout-others")?.addEventListener("click", async () => {
+    const { error } = await db.auth.signOut({ scope: "others" });
+    if (error) showNotice("security-notice", "error", error.message);
+    else showNotice("security-notice", "success", "Signed out of other sessions.");
+  });
+}
+
+function attachSettingsAccount() {
+  document.getElementById("export-btn")?.addEventListener("click", async () => {
+    try {
+      const [p, ph, prefs, ints, likes, passes, matches, blocks] = await Promise.all([
+        db.from("profiles").select("*").eq("id", session.user.id).maybeSingle(),
+        db.from("profile_photos").select("*").eq("user_id", session.user.id),
+        db.from("user_preferences").select("*").eq("user_id", session.user.id).maybeSingle(),
+        db.from("user_interests").select("*").eq("user_id", session.user.id),
+        db.from("likes").select("*").eq("actor_id", session.user.id),
+        db.from("passes").select("*").eq("actor_id", session.user.id),
+        db.from("matches").select("*").or(`user_a_id.eq.${session.user.id},user_b_id.eq.${session.user.id}`),
+        db.from("user_blocks").select("*").eq("blocker_id", session.user.id),
+      ]);
+      const payload = {
+        exported_at: new Date().toISOString(),
+        user: { id: session.user.id, email: session.user.email },
+        profile: p.data, photos: ph.data, preferences: prefs.data,
+        interests: ints.data, likes: likes.data, passes: passes.data,
+        matches: matches.data, blocks: blocks.data,
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `hearthside-export-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      showNotice("account-notice", "error", err.message || "Could not export.");
+    }
+  });
+
+  document.getElementById("delete-btn")?.addEventListener("click", async () => {
+    const confirmText = prompt(
+      "This will hide your profile immediately and permanently delete your account within 30 days.\n\n" +
+      "Type DELETE (all caps) to confirm:"
+    );
+    if (confirmText !== "DELETE") return;
+    try {
+      // Soft-delete the profile now; the row is anonymised.
+      await db.from("profiles").update({
+        profile_status: "deleted",
+        is_discoverable: false,
+        display_name: "Deleted member",
+        bio: null, city: null, gender: null, date_of_birth: null,
+        relationship_intention: null, country_code: null,
+      }).eq("id", session.user.id);
+      await db.from("profile_photos").delete().eq("user_id", session.user.id);
+      await api.signOut();
+      location.hash = "#/";
+      alert("Your account has been scheduled for deletion. You have been signed out.");
+    } catch (err) {
+      showNotice("account-notice", "error", err.message || "Could not delete account.");
+    }
+  });
+}
+
+/* ============================================================================
+   14. 404
+   ============================================================================ */
+function notFoundPage() {
+  return `<section class="section" style="text-align:center;"><div class="container stack">
+    <p style="font-family:var(--font-display);font-size:64px;font-weight:600;">404</p>
+    <h1 style="font-size:28px;">That page isn&rsquo;t here</h1>
+    <p class="lead">The link may be out of date, or the page may have moved.</p>
+    <a class="btn btn-primary" href="#/" data-link style="margin-top:16px;">Back home</a>
+  </div></section>`;
+}
+
+/* ============================================================================
+   15. BOOT
+   ============================================================================ */
+document.getElementById("year").textContent = new Date().getFullYear();
+
+// Delegate clicks for [data-link] — but the hash href already handles navigation,
+// so we only need to close the user menu on link click.
+document.addEventListener("click", (e) => {
+  if (e.target.closest("a[href^='#']")) {
+    document.getElementById("user-menu")?.classList.remove("open");
+  }
+});
+
+window.addEventListener("hashchange", render);
+
+async function boot() {
+  await refreshAuth();
+  renderHeader();
+  await render();
+}
+boot();
+
+// Re-render header whenever session changes.
+const origRenderHeader = renderHeader;
+
+/* ============================================================================
+   16. Expose for debugging
+   ============================================================================ */
+window.__hs = { get session() { return session; }, get profile() { return profile; }, get entitlements() { return entitlements; } };
+</script>
 </body>
 </html>
